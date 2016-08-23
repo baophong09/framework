@@ -1,0 +1,16 @@
+{
+    "name": "maskphp/framework",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "DavidNguyen",
+            "email": "nguyendamtung@gmail.com"
+        }
+    ],
+
+    "require": {
+        "php": ">=5.3.0"
+    },
+
+    "minimum-stability": "dev"
+}
