@@ -21,14 +21,5 @@
 
     },
 
-    "autoload": {
-        "files": [
-            "vendor/maskphp/framework/src/MaskPHP/define.php"
-        ],
-        "psr-4": {
-            "Maskphp\\": "src/MaskPHP/"
-        }
-    },
-
     "minimum-stability": "dev"
 }
