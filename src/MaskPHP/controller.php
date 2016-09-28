@@ -14,37 +14,5 @@
 
 namespace MaskPHP;
 
-class Base{
-	/**
-     * get property: public|protected
-     * @param  string $property
-     */
-    public function get($property){
-        return $this->{$property};
-    }
-
-    /**
-     * get private property
-     * @param  string $property
-     */
-    public function getPrivate($property){
-        if(property_exists($this, $property)){
-            $ref = new \ReflectionClass($this);
-            $p = $ref->getProperty($property);
-            if($p->isPrivate()){
-                $p->setAccessible(true);
-                return $p->getValue($this);
-            }
-        }
-
-        return null;
-    }
-
-    /**
-	 * auto expand method
-	 */
-	function __call($method, $args){
-		$lib = str_replace('\\', '.', get_class($this));
-		return \M::event()->expand("$lib.expand.$method", $args, $this);
-	}
+abstract class Controller extends Base{
 }
