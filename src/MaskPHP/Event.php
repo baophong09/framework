@@ -24,7 +24,7 @@ class Event extends Base{
 	 * @param  boolean $return
 	 */
 	public function trigger($event, $args = null, $return = false){
-		\M::trimLower($event);
+		M::trimLower($event);
 		if(!in_array($event, $this->event)){
 			$this->event[] = $event;
 		}
@@ -75,7 +75,7 @@ class Event extends Base{
 					break;
 
 					case 'attach':
-						$ret = \M::import($v['args'], true, array('args' => &$args), true);
+						$ret = M::import($v['args'], true, array('args' => &$args), true);
 					break;
 
 					default:
@@ -97,7 +97,7 @@ class Event extends Base{
 	 * @param  string  $type
 	 */
 	public function hook($event, $args = null, $priority = 0, $overwrite = true, $type = null){
-		\M::trimLower($event);
+		M::trimLower($event);
 
 		// store event
 		if(!isset($this->hook[$event])){
@@ -142,13 +142,13 @@ class Event extends Base{
 	 * @param  object  &$obj
 	 */
 	public function expand($event, $args = null, &$obj = null){
-		\M::trimLower($event);
+		M::trimLower($event);
 
 		if(!isset($this->hook[$event])){
 			// call parent method
-			$method = \M::lastString($event, '.');
+			$method = M::lastString($event, '.');
 			$event = str_replace('\\', '.', get_parent_class($obj)) . '.expand.' . $method;
-			\M::trimLower($event);
+			M::trimLower($event);
 		}
 
 		if(isset($this->hook[$event])){

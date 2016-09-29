@@ -45,6 +45,6 @@ class Base{
 	 */
 	function __call($method, $args){
 		$lib = str_replace('\\', '.', get_class($this));
-		return \M::event()->expand("$lib.expand.$method", $args, $this);
+		return M::event()->expand("$lib.expand.$method", $args, $this);
 	}
 }

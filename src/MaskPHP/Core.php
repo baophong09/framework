@@ -91,7 +91,7 @@ abstract class M{
                 }
 
                 if(!$resource = self::getPath(self::trimmer($resource))){
-                    self::exception('\M::load(...) : Library "%s" dose not exist', $name);
+                    self::exception('M::load(...) : Library "%s" dose not exist', $name);
                 }
 
                 $lib[$name] = array('resource' => $resource, 'class' => $class, 'args' => $args);
@@ -102,7 +102,7 @@ abstract class M{
 
         // check library is defined
         if(!isset($lib[$name])){
-            self::exception('\M::load(...) : Library "%s" is not defined', $name);
+            self::exception('M::load(...) : Library "%s" is not defined', $name);
         }
 
         // return library if exist
@@ -115,7 +115,7 @@ abstract class M{
         $class = $lib[$name]['class'];
 
         if(!class_exists(self::trimmer($class))){
-            self::exception('\M::load(...) : Class "%s" is not defined', $class);
+            self::exception('M::load(...) : Class "%s" is not defined', $class);
         }
 
         if(method_exists($class,  '__construct')){
@@ -194,7 +194,7 @@ abstract class M{
         foreach((array)$files as $file){
             if(!($f = self::getPath($file))){
                 if($require){
-                    self::exception('\M::import(...) : Failed opening required %s', $file);
+                    self::exception('M::import(...) : Failed opening required %s', $file);
                 }else{
                     $error = true;
                     continue;

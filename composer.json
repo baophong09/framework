@@ -13,7 +13,9 @@
     },
     "autoload": {
 	"files": [
-            "src/MaskPHP/define.php"
+            "src/MaskPHP/Define.php",
+            "src/MaskPHP/Core.php",
+            "src/MaskPHP/Base.php"
         ],
         "psr-4": {
             "Maskphp\\": "src/MaskPHP/"
