@@ -12,7 +12,7 @@
  * +------------------------------------------------------------------------+
  */
 
-namespace Maskphp;
+namespace MaskPHP;
 
 /**
  * application time start

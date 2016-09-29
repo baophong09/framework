@@ -19,6 +19,7 @@ class Route extends Base{
 		MAP_URI_PATTERN 		= 'module/hook_module/group_controller/controller/action';
 
 	public
+		$default_module 		= 'helloworld',
 		$default_url 			= 'default/index/index',
 		$default_error 			= 'default/error/404',
 		$url_extension			= '.html',
@@ -45,8 +46,6 @@ class Route extends Base{
 	 */
 	public function response(){
 		ob_start();
-			// load controller
-			require_once CORE_PATH . 'controller.php';
 			// load default config
 			require_once CONFIG_PATH . 'default.php';
 

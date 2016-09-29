@@ -12,7 +12,7 @@
  * +------------------------------------------------------------------------+
  */
 
-namespace Maskphp;
+namespace MaskPHP;
 
 abstract class M{
     const CORE_NAMESPACE = 'MaskPHP';

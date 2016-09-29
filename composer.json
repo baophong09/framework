@@ -15,10 +15,11 @@
 	"files": [
             "src/MaskPHP/Define.php",
             "src/MaskPHP/Core.php",
-            "src/MaskPHP/Base.php"
+            "src/MaskPHP/Base.php",
+            "src/MaskPHP/Controller.php"
         ],
         "psr-4": {
-            "Maskphp\\": "src/MaskPHP/"
+            "MaskPHP\\": "src/MaskPHP/"
         }
 
     },
