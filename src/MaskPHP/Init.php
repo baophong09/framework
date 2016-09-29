@@ -12,6 +12,3 @@
  * +------------------------------------------------------------------------+
  */
 
-namespace MaskPHP;
-
-abstract class Controller extends Base{}

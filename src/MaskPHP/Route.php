@@ -8,7 +8,7 @@
  * | @since         : Version 1.0.0                                         |
  * | @website       : http://www.maskphp.com                                |
  * | @email         : support@maskphp.com                                   |
- * | @require       : PHP version >= 5.3.0                                  |
+ * | @require       : PHP version >= 5.4.0                                  |
  * +------------------------------------------------------------------------+
  */
 
@@ -45,6 +45,9 @@ class Route extends Base{
 	 * parsing request... then response result to client
 	 */
 	public function response(){
+		// assign class alias
+		class_alias('\MaskPHP\M', 'M');
+
 		ob_start();
 			// load default config
 			require_once CONFIG_PATH . 'default.php';
@@ -60,16 +63,8 @@ class Route extends Base{
 			// autoload class
 			/*
 			spl_autoload_register(function($cls){
-				$file = $cls . EXT;
-				if(!class_exists($cls)){
-					if(($f = get_readable(MODULE_PATH . $file)) || ($f = get_readable(LIBRARY_PATH . $file)) || ($f = get_readable(APP_PATH . $file))){
-						//M::load($cls, $f);
-						M::import($f, false);
-					}
-				}
 			});
 			*/
-
 
 			// parser url
 			$this->parseURL();

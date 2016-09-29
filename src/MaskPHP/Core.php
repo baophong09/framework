@@ -8,23 +8,13 @@
  * | @since         : Version 1.0.0                                         |
  * | @website       : http://www.maskphp.com                                |
  * | @email         : support@maskphp.com                                   |
- * | @require       : PHP version >= 5.3.0                                  |
+ * | @require       : PHP version >= 5.4.0                                  |
  * +------------------------------------------------------------------------+
  */
 
 namespace MaskPHP;
 
 abstract class M{
-    const CORE_NAMESPACE = 'MaskPHP';
-
-    /**
-     * get core
-     */
-    public static function __callStatic($name, $args){
-        $cls = self::CORE_NAMESPACE . '\\' . $name;
-        return self::load($cls, $cls, CORE_PATH . $name . EXT, $args, false);
-    }
-
     /**
      * get library
      * @param  string $name
@@ -39,8 +29,9 @@ abstract class M{
      * @param  string | object  $resource
      * @param  string  $class
      * @param  array   $args
+     * @param  boolean $overwrite
      */
-    public static function register($name, $resource = '', $class = '', $args = array()){
+    public static function register($name, $resource = '', $class = '', $args = array(), $overwrite = true){
         $libs = array();
         if(!is_array($name)){
             $libs[] = array('name' => $name, 'resource' => $resource, 'class' => $class, 'args' => $args);
@@ -55,8 +46,18 @@ abstract class M{
                 , isset($v['resource']) ? $v['resource'] : ''
                 , isset($v['args']) ? $v['args'] : array()
                 , true
+                , $overwrite
             );
         }
+    }
+
+    /**
+     * get core
+     */
+    public static function __callStatic($name, $args){
+        $cls = CORE_NAMESPACE . $name;
+        self::register($cls, new $cls, $cls);
+        return self::get($cls);
     }
 
     /**
@@ -66,55 +67,35 @@ abstract class M{
      * @param  string | object  $resource
      * @param  array   $args
      * @param  boolean $register
+     * @param  boolean $overwrite
      */
-    public static function load($name, $class = null, $resource = null, $args = null, $register = false){
+    public static function load($name, $class = null, $resource = null, $args = null, $register = false, $overwrite = true){
         static $lib = array();
+        trim_lower($name);
 
-        // dont allow overwite core
-        if(preg_match('/^' . self::CORE_NAMESPACE . '\\\/i', self::trimLower($name))){
-            if(!isset($lib[$name])){
-                $lib[$name] = array('resource' => $resource, 'class' => $class, 'args' => $args);
+        if($register){
+            if(!isset($lib[$name]) || (isset($lib[$name]) && $lib[$name]['overwrite'])){
+                $class = '\\' . trim($class, '\\');
+                $lib[$name] = array('resource' => $resource, 'class' => $class, 'args' => $args, 'overwrite' => $overwrite);
             }
-        }
-        // for register
-        elseif($register){
-            // overwrite lib
-            if(isset($lib[$name])){
-                unset($lib[$name]);
-            }
-
-            // register lib
-            if(!isset($lib[$name])){
-                if(is_object($resource)){
-                    $lib[$name] = array('resource' => $resource, 'class' => null, 'args' => null);
-                    return;
-                }
-
-                if(!$resource = self::getPath(self::trimmer($resource))){
-                    self::exception('M::load(...) : Library "%s" dose not exist', $name);
-                }
-
-                $lib[$name] = array('resource' => $resource, 'class' => $class, 'args' => $args);
-            }
-
             return;
         }
 
         // check library is defined
         if(!isset($lib[$name])){
-            self::exception('M::load(...) : Library "%s" is not defined', $name);
+            self::exception('M::load(...) : Library "%s" is not exist', $name);
         }
 
-        // return library if exist
-         if(is_object($lib[$name]['resource'])){
+        // return library if exist & init
+        if(is_object($lib[$name]['resource'])){
             return $lib[$name]['resource'];
         }
 
         // create new object
         self::import($lib[$name]['resource'], true);
-        $class = $lib[$name]['class'];
+        $class =& $lib[$name]['class'];
 
-        if(!class_exists(self::trimmer($class))){
+        if(!class_exists($class)){
             self::exception('M::load(...) : Class "%s" is not defined', $class);
         }
 
@@ -144,18 +125,18 @@ abstract class M{
 
         if(is_string($key)){
             // return all configs
-            if(!self::trimLower($key)){
+            if(!$key){
                 return $data;
             }
-            $temp[$key] = $val;
+            $temp[trim_lower($key)] = $val;
         }else{
             $overwrite = (boolean)$val;
-            $temp = $key;
+            $temp =& $key;
         }
 
         foreach((array)$temp as $k => $v){
             // return config by $key
-            if(self::isEmpty($v)){
+            if(is_empty($v)){
                 return isset($data[$k]) ? $data[$k] : null;
             }
 
@@ -192,7 +173,13 @@ abstract class M{
 
         // check & include file
         foreach((array)$files as $file){
-            if(!($f = self::getPath($file))){
+            // skip include file
+            if(in_array($file, get_included_files())){
+                continue;
+            }
+
+            // check file exist
+            if(!($f = get_path($file))){
                 if($require){
                     self::exception('M::import(...) : Failed opening required %s', $file);
                 }else{
@@ -201,9 +188,7 @@ abstract class M{
                 }
             }
 
-            if(!in_array($f, get_included_files())){
-                require_once $f;
-            }
+            require_once $f;
         }
 
         return $error;
@@ -247,223 +232,5 @@ abstract class M{
      */
     public static function exception($str, $args = null){
         throw new \Exception(vsprintf($str, (array)$args));
-    }
-
-    /**
-     * check empty value
-     * @param  $var
-     */
-    public static function isEmpty($var){
-        if($var === EMPTY_VALUE){
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * trim string
-     * @param  string &$str
-     */
-    public static function trimmer(&$str){
-        return $str = trim(preg_replace('#\s+#', ' ', $str));
-    }
-
-    /**
-     * trim & convert string to lower case
-     * @param  string &$str
-     */
-    public static function trimLower(&$str){
-        return $str = strtolower(self::trimmer($str));
-    }
-
-    /**
-     * trim & convert string to upper case
-     * @param  string &$str
-     */
-    public static function trimUpper(&$str){
-        return $str = strtoupper(self::trimmer($str));
-    }
-
-    /**
-     * replace multi & trim slash
-     * @param  string &$str
-     * @param  string $slash
-     */
-    public static function trimSlash(&$str, $slash = '/'){
-        return $str = trim(preg_replace("/[\/\\\]+/", $slash, $str), $slash);
-    }
-
-    /**
-     * get last string after symbol
-     * @param  string $str
-     * @param  string $symbol
-     */
-    public static function lastString($str, $symbol = '/'){
-        return substr(strrchr($str, $symbol), 1);
-    }
-
-    /**
-     * get first string before symbol
-     * @param  string $str
-     * @param  string $symbol
-     */
-    public static function firstString($str, $symbol = '/'){
-        return strstr($str, $symbol, 1);
-    }
-
-    /**
-     * json parse (decode)
-     * @param  string  $str
-     * @param  boolean $assoc true: array; false: object
-     */
-    public static function jsonParse($str, $assoc = true){
-        try{
-            return json_decode($str, $assoc);
-        }catch(\Exception $e){
-            return array();
-        }
-    }
-
-    /**
-     * get files in folder
-     * @param  string $dir
-     */
-    public static function getFile($dir){
-        return self::getSub($dir, false);
-    }
-
-    /**
-     * get sub folders in folder
-     * @param string $dir
-     */
-    public static function getFolder($dir){
-        return self::getSub($dir, true);
-    }
-
-    /**
-     * get sub folder | file
-     * @param  string $dir
-     * @param  boolean $child true: folders; false: files
-     */
-    public static function getSub($dir, $child = null){
-        $dir = self::getPath($dir);
-        $sub = array();
-
-        if($child === null){
-            $sub = glob($dir . '*');
-        }elseif($child){
-            $sub = glob($dir . '*', GLOB_ONLYDIR);
-        }else{
-            $sub = glob($dir . '*');
-            foreach($sub as $k => $v){
-                if(!is_file($v)){
-                    unset($sub[$k]);
-                }
-            }
-        }
-
-        return $sub;
-    }
-
-    /**
-     * get real path of file or directory
-     * @param  string $path
-     */
-    public static function getPath($path){
-        // for windows
-        if(IS_WINDOWS){
-            if(self::trimSlash($path, DS) && (is_readable($path) || is_readable($path = APP_PATH . $path))){
-                // file type
-                if(is_file($path)){
-                    return $path;
-                }
-                // directory type
-                else{
-                    return rtrim($path, DS) . DS;
-                }
-            }
-
-            return '';
-        }
-
-        // for linux
-        // check not absolute path
-        if(!preg_match('/^\//', $path)){
-            $path = ROOT_PATH . $path;
-        }
-
-        $path = DS . self::trimSlash($path);
-
-        $pies = explode(DS, $path);
-        array_shift($pies);
-        $last = array_pop($pies);
-
-        // get parent folder
-        $path = DS;
-        do{
-            $first  = array_shift($pies);
-            $sub = glob($path . '*', GLOB_ONLYDIR);
-
-            // dont have permission to access
-            if(!$sub){
-                $path .= $first . DS;
-                continue;
-            }
-
-            // have permission to access
-            $exist = false;
-            foreach(glob($path . '*', GLOB_ONLYDIR) as $v){
-                if(strcasecmp($path . $first, $v) == 0){
-                    $path = $v . DS;
-                    $exist = true;
-                    break;
-                }
-            }
-
-            if(!$exist){
-                return '';
-            }
-
-        }while($pies);
-
-        // check exist
-        foreach(glob($path . '*') as $v){
-            if(strcasecmp($path . $last, $v) == 0){
-                if(is_file($v)){
-                    return $v;
-                }else{
-                    return rtrim($v, DS) . DS;
-                }
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * excution time
-     * @param  float $start
-     * @param  float $end
-     */
-    public static function excutionTime($start, $end = 0){
-        if($end <= 0){
-            $end = microtime(true);
-        }
-        return ($total = (float)($end - $start)) >= 1 ? $total . ' s' : $total*1000 . ' ms';
-    }
-
-    /**
-     * memory usage
-     * @param  float $size
-     */
-    public static function memoryUsage($size = 0){
-        $unit = array('B', 'KB', 'MB', 'GB', 'TB', 'PB');
-
-        if($size <= 0){
-            $size = memory_get_peak_usage();
-        }
-
-        return round(($size)/pow(1024, ($i = floor(log($size, 1024)))), 2) . ' ' . $unit[$i];
     }
 }

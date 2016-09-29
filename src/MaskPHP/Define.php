@@ -8,11 +8,14 @@
  * | @since         : Version 1.0.0                                         |
  * | @website       : http://www.maskphp.com                                |
  * | @email         : support@maskphp.com                                   |
- * | @require       : PHP version >= 5.3.0                                  |
+ * | @require       : PHP version >= 5.4.0                                  |
  * +------------------------------------------------------------------------+
  */
 
-namespace MaskPHP;
+/**
+ * core namespace
+ */
+define('CORE_NAMESPACE', '\MaskPHP\\');
 
 /**
  * application time start

@@ -8,7 +8,7 @@
  * | @since         : Version 1.0.0                                         |
  * | @website       : http://www.maskphp.com                                |
  * | @email         : support@maskphp.com                                   |
- * | @require       : PHP version >= 5.3.0                                  |
+ * | @require       : PHP version >= 5.4.0                                  |
  * +------------------------------------------------------------------------+
  */
 
@@ -56,13 +56,21 @@ class Event extends Base{
 			}
 		}
 
-		// sort by priority ACS
+		// sort by priority ASC
 		krsort($hook);
 
 		// set array type
 		if(!is_array($args)){
 			$temp = $args;
 			$args = array($temp);
+		}
+
+		$data = array('args' => &$args);
+
+		foreach($args as $k => $v){
+			if(is_string($k)){
+				$data[$k] =& $args[$k];
+			}
 		}
 
 		// fire trigger
@@ -75,7 +83,7 @@ class Event extends Base{
 					break;
 
 					case 'attach':
-						$ret = M::import($v['args'], true, array('args' => &$args), true);
+						$ret = M::import($v['args'], true, $data, true);
 					break;
 
 					default:
