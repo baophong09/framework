@@ -12,3 +12,14 @@
  * +------------------------------------------------------------------------+
  */
 
+// define
+require_once 'Define.php';
+
+// helper
+require_once 'Helper.php';
+
+// core
+require_once 'Core.php';
+
+// quick call
+class_alias('\MaskPHP\M', 'M', false);

@@ -15,33 +15,31 @@
 namespace MaskPHP;
 
 abstract class Base{
-	/**
-     * get property: public|protected
-     * @param  string $property
-     */
-    public function get($property){
-        return $this->{$property};
-    }
-
     /**
-     * get private property
+     * get property
      * @param  string $property
+     * @param  $default
      */
-    public function getPrivate($property){
+    public function get($property, $default = null){
         if(property_exists($this, $property)){
-            $ref = new \ReflectionClass($this);
-            $p = $ref->getProperty($property);
+            $ref    = new \ReflectionClass($this);
+            $p      = $ref->getProperty($property);
+
             if($p->isPrivate()){
                 $p->setAccessible(true);
                 return $p->getValue($this);
             }
+
+            return $this->{$property};
         }
 
-        return null;
+        return $default;
     }
 
     /**
 	 * auto expand method
+     * @param  string $method
+     * @param  array $args
 	 */
 	function __call($method, $args){
 		$lib = str_replace('\\', '.', get_class($this));

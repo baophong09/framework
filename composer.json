@@ -9,16 +9,17 @@
     ],
 
     "require": {
-        "php": ">=5.3.0"
+        "php": ">=5.3.0",
+        "twig/twig": "~1.0"
     },
+
     "autoload": {
-	"files": [
+	   "files": [
             "src/MaskPHP/Init.php"
         ],
         "psr-4": {
             "MaskPHP\\": "src/MaskPHP/"
         }
-
     },
 
     "minimum-stability": "dev"

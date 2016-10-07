@@ -15,17 +15,15 @@
 namespace MaskPHP;
 
 class Event extends Base{
-	protected $hook = array(), $event = array();
+	private $hook = array(), $event = array();
 
 	/**
 	 * trigger event
 	 * @param  string $event
 	 * @param  array $args
-	 * @param  boolean $return
 	 */
-	public function trigger($event, $args = null, $return = false){
-		M::trimLower($event);
-		if(!in_array($event, $this->event)){
+	public function trigger($event, $args = null){
+		if(!in_array(trim_lower($event), $this->event)){
 			$this->event[] = $event;
 		}
 
@@ -40,13 +38,13 @@ class Event extends Base{
 		$hlen = 0;
 		foreach($hook as $k => $priority){
 			$hlen++;
-			$plen = 0;
-			$break = false;
+			$plen 	= 0;
+			$break 	= false;
 			foreach($priority as $p){
 				$plen++;
 				if(!$p['overwrite']){
-					$hook[$k] = array_splice($priority, 0, $plen);
-					$break = true;
+					$hook[$k] 	= array_splice($priority, 0, $plen);
+					$break 		= true;
 				}
 			}
 
@@ -74,26 +72,25 @@ class Event extends Base{
 		}
 
 		// fire trigger
-		$ret = null;
 		foreach($hook as $priority){
 			foreach($priority as $v){
 				switch($v['type']){
 					case 'callback':
-						$ret = call_user_func_array($v['args'], $args);
+						return call_user_func_array($v['args'], $args);
 					break;
 
 					case 'attach':
-						$ret = M::import($v['args'], true, $data, true);
+						return M::import($v['args'], true, $data, true);
 					break;
 
 					default:
-						$ret = $v['args'];
+						return $v['args'];
 					break;
 				}
 			}
 		}
 
-		return $return ? $ret : null;
+		return null;
 	}
 
 	/**
@@ -105,10 +102,8 @@ class Event extends Base{
 	 * @param  string  $type
 	 */
 	public function hook($event, $args = null, $priority = 0, $overwrite = true, $type = null){
-		M::trimLower($event);
-
 		// store event
-		if(!isset($this->hook[$event])){
+		if(!isset($this->hook[trim_lower($event)])){
 			$this->hook[$event] = array();
 		}
 		$hook =& $this->hook[$event];
@@ -150,19 +145,17 @@ class Event extends Base{
 	 * @param  object  &$obj
 	 */
 	public function expand($event, $args = null, &$obj = null){
-		M::trimLower($event);
-
-		if(!isset($this->hook[$event])){
-			// call parent method
-			$method = M::lastString($event, '.');
-			$event = str_replace('\\', '.', get_parent_class($obj)) . '.expand.' . $method;
-			M::trimLower($event);
+		// extend parent
+		if(!isset($this->hook[trim_lower($event)])){
+			$method = last_string($event, '.');
+			$event 	= str_replace('\\', '.', get_parent_class($obj)) . '.expand.' . $method;
+			trim_lower($event);
 		}
 
 		if(isset($this->hook[$event])){
 			array_unshift($args, null);
 			$args[0] =& $obj;
-			return self::trigger($event, $args, true);
+			return self::trigger($event, $args);
 		}
 
 		return $obj;

@@ -122,14 +122,25 @@ defined('PROTOCOL') OR define('PROTOCOL', isset($_SERVER['HTTPS']) && ($_SERVER[
 defined('PORT') OR define('PORT', isset($_SERVER['SERVER_PORT']) ? $_SERVER['SERVER_PORT'] : 80);
 
 /**
- * site root
- * ex: http://maskgroup.com, http://localhost/maskphp/,...
+ * site path
+ * ex: /public_html
  */
-defined('SITE_ROOT') OR define('SITE_ROOT', trim(PROTOCOL . '://' . DOMAIN . (PORT == '80' ? '' : ':' . PORT) . preg_replace('/(index|console).php$/i', '', $_SERVER['PHP_SELF']), '/') . '/');
+$php_self = substr($_SERVER['PHP_SELF'], 0, strripos($_SERVER['PHP_SELF'], DS));
+$site_path = '';
+if(substr_count($php_self, DS) >= 2){
+	$site_path = $php_self;
+}
+defined('SITE_PATH') OR define('SITE_PATH', $site_path);
+
+/**
+ * site root
+ * ex: http://maskphp.com, http://localhost/maskphp/,...
+ */
+defined('SITE_ROOT') OR define('SITE_ROOT', trim(PROTOCOL . '://' . DOMAIN . (PORT == '80' ? '' : ':' . PORT) . SITE_PATH, '/') . '/');
 
 /**
  * Http referer
- * ex: http://sukienhay.com/
+ * ex: http://maskphp.com/
  */
 defined('HTTP_REFERER') OR define('HTTP_REFERER', isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '');
 

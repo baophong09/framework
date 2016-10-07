@@ -41,8 +41,8 @@ if(!function_exists('trimmer')){
  * @param  string &$str
  */
 if(!function_exists('trim_lower')){
-	function trimLower(&$str){
-	    return $str = strtolower(self::trimmer($str));
+	function trim_lower(&$str){
+	    return $str = strtolower(trimmer($str));
 	}
 }
 
@@ -52,7 +52,7 @@ if(!function_exists('trim_lower')){
  */
 if(!function_exists('trim_upper')){
 	function trim_upper(&$str){
-	    return $str = strtoupper(self::trimmer($str));
+	    return $str = strtoupper(trimmer($str));
 	}
 }
 
@@ -72,8 +72,8 @@ if(!function_exists('last_string')){
  * @param  string $str
  * @param  string $symbol
  */
-if(!function_exists('fisrt_string')){
-	function fisrt_string($str, $symbol = '/'){
+if(!function_exists('first_string')){
+	function first_string($str, $symbol = '/'){
 	    return strstr($str, $symbol, 1);
 	}
 }
@@ -160,14 +160,12 @@ if(!function_exists('get_path')){
         // for windows
         if(IS_WINDOWS){
             if(trim_slash($path, DS) && (is_readable($path) || is_readable($path = APP_PATH . $path))){
-                // file type
+                // file
                 if(is_file($path)){
                     return $path;
                 }
-                // directory type
-                else{
-                    return rtrim($path, DS) . DS;
-                }
+                // folder
+                return rtrim($path, DS) . DS;
             }
 
             return '';
@@ -189,7 +187,7 @@ if(!function_exists('get_path')){
         $path = DS;
         do{
             $first  = array_shift($pies);
-            $sub = glob($path . '*', GLOB_ONLYDIR);
+            $sub    = glob($path . '*', GLOB_ONLYDIR);
 
             // dont have permission to access
             if(!$sub){
@@ -216,15 +214,49 @@ if(!function_exists('get_path')){
         // check exist
         foreach(glob($path . '*') as $v){
             if(strcasecmp($path . $last, $v) == 0){
+                // file
                 if(is_file($v)){
                     return $v;
-                }else{
-                    return rtrim($v, DS) . DS;
                 }
+                // folder
+                return rtrim($v, DS) . DS;
             }
         }
 
         return '';
+    }
+}
+
+/**
+ * redirect url
+ * @param  string $url
+ * @param  int $delay millisecond
+ * @param  int $code
+ * @param  boolean $replace
+ */
+if(!function_exists('redirect')){
+    function redirect($url = null, $delay = 0, $code = 301, $replace = false){
+        $absolute = false;
+
+        if(!$url){
+            $url        = SITE_ROOT;
+            $absolute   = true;
+        }
+
+        if(preg_match('/^[a-zA-Z0-9]+\:\/\/(.*?)/', $url)){
+            $absolute = true;
+        }
+
+        if(!$absolute){
+            $url = SITE_ROOT . trim($url, '/');
+        }
+
+        // delay
+        usleep($delay * 1000);
+
+        // redirect
+        header('Location: ' . $url, $replace, $code);
+        die;
     }
 }
 

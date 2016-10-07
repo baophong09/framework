@@ -16,142 +16,106 @@ namespace MaskPHP;
 
 abstract class M{
     /**
-     * get library
+     * get core library
      * @param  string $name
+     * @param  array $args
      */
-    public static function get($name){
-        return self::load($name, null, null, null, false);
+    public static function __callStatic($lib, $args){
+        static $data = array();
+
+        $first  = substr(trim_lower($lib), 0, 1);
+        $cls    = "\MaskPHP\\" . strtoupper($first) . substr($lib, 1);
+        $lib    = strtolower(str_replace('\\', '.', trim_slash($cls, '\\')));
+
+        if(!isset($data[$lib])){
+            $data[$lib] = new $cls;
+        }
+
+        return $data[$lib];
+    }
+
+    /**
+     * get library
+     * @param  string $lib
+     */
+    public static function get($lib){
+        return self::load($lib);
     }
 
     /**
      * register library
-     * @param  string | array  $name
-     * @param  string | object  $resource
+     * @param  string  $lib
      * @param  string  $class
+     * @param  string | object  $resource
      * @param  array   $args
      * @param  boolean $overwrite
      */
-    public static function register($name, $resource = '', $class = '', $args = array(), $overwrite = true){
-        $libs = array();
-        if(!is_array($name)){
-            $libs[] = array('name' => $name, 'resource' => $resource, 'class' => $class, 'args' => $args);
-        }else{
-            $libs = (array)$name;
-        }
-
-        foreach($libs as $v){
-            self::load(
-                $v['name']
-                , isset($v['class']) ? $v['class'] : ''
-                , isset($v['resource']) ? $v['resource'] : ''
-                , isset($v['args']) ? $v['args'] : array()
-                , true
-                , $overwrite
-            );
-        }
-    }
-
-    /**
-     * get core
-     */
-    public static function __callStatic($name, $args){
-        $cls = CORE_NAMESPACE . $name;
-        self::register($cls, new $cls, $cls);
-        return self::get($cls);
+    public static function register($lib, $class, $resource, $args = array(), $overwrite = true){
+        return self::load($lib, $class, $resource, $args, $overwrite, true);
     }
 
     /**
      * load library
-     * @param  string  $name
+     * @param  string  $lib
      * @param  string  $class
      * @param  string | object  $resource
      * @param  array   $args
-     * @param  boolean $register
      * @param  boolean $overwrite
+     * @param  boolean $register
      */
-    public static function load($name, $class = null, $resource = null, $args = null, $register = false, $overwrite = true){
-        static $lib = array();
-        trim_lower($name);
+    public static function load($lib, $class = '', $resource = '', $args = null, $overwrite = true, $register = false){
+        static $data = array();
 
+        trim_lower($lib);
         if($register){
-            if(!isset($lib[$name]) || (isset($lib[$name]) && $lib[$name]['overwrite'])){
-                $class = '\\' . trim($class, '\\');
-                $lib[$name] = array('resource' => $resource, 'class' => $class, 'args' => $args, 'overwrite' => $overwrite);
+            if(!isset($data[$lib]) || $data[$lib]['overwrite']){
+                $class      = '\\' . trim($class, '\\');
+                $data[$lib] = array('class' => $class, 'resource' => $resource, 'args' => $args, 'overwrite' => $overwrite);
             }
-            return;
+            return null;
         }
 
         // check library is defined
-        if(!isset($lib[$name])){
-            self::exception('M::load(...) : Library "%s" is not exist', $name);
+        if(!isset($data[$lib])){
+            self::exception('M::load(...) : Library "%s" is not exist', $lib);
         }
 
         // return library if exist & init
-        if(is_object($lib[$name]['resource'])){
-            return $lib[$name]['resource'];
+        if(is_object($data[$lib]['resource'])){
+            return $data[$lib]['resource'];
         }
 
         // create new object
-        self::import($lib[$name]['resource'], true);
-        $class =& $lib[$name]['class'];
+        self::import($data[$lib]['resource'], true);
+        $class =& $data[$lib]['class'];
 
         if(!class_exists($class)){
             self::exception('M::load(...) : Class "%s" is not defined', $class);
         }
 
         if(method_exists($class,  '__construct')){
-            $ref = new \ReflectionClass($class);
-            $lib[$name]['resource'] = $ref->newInstanceArgs((array)$lib[$name]['args']);
+            $ref                    = new \ReflectionClass($class);
+            $data[$lib]['resource'] = $ref->newInstanceArgs((array)$data[$lib]['args']);
         }else{
-            $lib[$name]['resource'] = new $class;
+            $data[$lib]['resource'] = new $class;
         }
 
         // return lib
-        return $lib[$name]['resource'];
+        return $data[$lib]['resource'];
     }
 
     /**
-     * set & get global config
-     * @param  array|string $key
-     * @param  $val
-     * @param  boolean $overwrite
+     * Reference to your controller’s instance
+     * @param  object $controller
      */
-    public static function config($key = null, $val = EMPTY_VALUE, $overwrite = true){
-        static
-            $data = array(),
-            $allow_overwrite = array();
+    public static function &get_instance(&$controller = null){
+        static $instance = null;
 
-        $temp = array();
-
-        if(is_string($key)){
-            // return all configs
-            if(!$key){
-                return $data;
-            }
-            $temp[trim_lower($key)] = $val;
-        }else{
-            $overwrite = (boolean)$val;
-            $temp =& $key;
+        if(!$instance && is_object($controller)){
+            $instance = $controller;
         }
 
-        foreach((array)$temp as $k => $v){
-            // return config by $key
-            if(is_empty($v)){
-                return isset($data[$k]) ? $data[$k] : null;
-            }
-
-            // set config
-            if(!isset($data[$k]) || !isset($allow_overwrite[$k])){
-                $data[$k] = $v;
-            }
-
-            // don't allow overwrite
-            if(!$overwrite){
-                $allow_overwrite[$k] = true;
-            }
-        }
-
-        return $data;
+        return $instance;
     }
 
     /**
@@ -163,16 +127,23 @@ abstract class M{
      * @param  string $prefix
      */
     public static function import($files, $require = true, $data = array(), $flag = EXTR_OVERWRITE, $prefix = null){
-        $error = false;
-
         // extract variable
         if(is_bool($flag) && $flag){
             $flag = EXTR_REFS;
         }
         extract((array)$data, $flag, $prefix);
 
+        // check import with one file
+        $import_one = false;
+        if(is_string($files)){
+            $import_one = true;
+        }
+
+        // store data
+        $data = array();
+
         // check & include file
-        foreach((array)$files as $file){
+        foreach((array)$files as $k => $file){
             // skip include file
             if(in_array($file, get_included_files())){
                 continue;
@@ -183,46 +154,15 @@ abstract class M{
                 if($require){
                     self::exception('M::import(...) : Failed opening required %s', $file);
                 }else{
-                    $error = true;
+                    $data[$k] = false;
                     continue;
                 }
             }
 
-            require_once $f;
+            $data[$k] = require_once $f;
         }
 
-        return $error;
-    }
-
-    /**
-     * redirect url
-     * @param  string $url
-     * @param  int $delay millisecond
-     * @param  int $code
-     * @param  boolean $replace
-     */
-    public static function redirect($url = null, $delay = 0, $code = 301, $replace = false){
-        $absolute = false;
-
-        if(!$url){
-            $url = SITE_ROOT;
-            $absolute = true;
-        }
-
-        if(preg_match('/^[a-zA-Z0-9]+\:\/\/(.*?)/', $url)){
-            $absolute = true;
-        }
-
-        if(!$absolute){
-            $url = SITE_ROOT . trim($url, '/');
-        }
-
-        // delay
-        usleep($delay * 1000);
-
-        // redirect
-        header('Location: ' . $url, $replace, $code);
-        die;
+        return $import_one && $data ? $data[0] : $data;
     }
 
     /**

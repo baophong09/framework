@@ -19,9 +19,9 @@ class Route extends Base{
 		MAP_URI_PATTERN 		= 'module/hook_module/group_controller/controller/action';
 
 	public
-		$default_module 		= 'helloworld',
-		$default_url 			= 'default/index/index',
-		$default_error 			= 'default/error/404',
+		$default_module 		= 'Mask',
+		$default_request_uri 	= 'index/index',
+		$default_error 			= 'error/404',
 		$url_extension			= '.html',
 		$use_query_param 		= false,
 		$allow_hook_module 		= array();
@@ -35,8 +35,8 @@ class Route extends Base{
 		$module 				= null,
 		$hook_module 			= null,
 		$group_controller 		= null,
-		$controller 			= 'index',
-		$action 				= 'index',
+		$controller 			= null,
+		$action 				= null,
 
 		$module_path 			= null,
 		$hook_path 				= null;
@@ -45,13 +45,7 @@ class Route extends Base{
 	 * parsing request... then response result to client
 	 */
 	public function response(){
-		// assign class alias
-		class_alias('\MaskPHP\M', 'M');
-
 		ob_start();
-			// load default config
-			require_once CONFIG_PATH . 'default.php';
-
 			// system on load
 			M::event()->trigger('system.on_load');
 
@@ -60,20 +54,34 @@ class Route extends Base{
 				M::event()->trigger('system.on_shutdown');
 			});
 
-			// autoload class
-			/*
-			spl_autoload_register(function($cls){
-			});
-			*/
+			// load default config & domain config
+			$config = array();
+			foreach(M::import(array(CONFIG_PATH . 'default' . EXT, CONFIG_PATH . DOMAIN . EXT), false) as $v){
+				if(is_array($v)){
+					$config = array_replace_recursive($config, $v);
+				}
+			}
 
+			// on load system config
+			M::event()->trigger('system.on_load_system_config', array(&$config));
+
+			// set global system config
+			M::config()->set('system', $config);
+
+			// set route config
+			foreach((array)$config['route'] as $k => $v){
+				$this->{$k} = $v;
+			}
+
+			$this
 			// parser url
-			$this->parseURL();
+			->parseURL()
 			// load module
-			$this->loadModule();
+			->loadModule()
 			// load controller
-			//$this->load_controller();
-			// load action
-			//$this->load_action();
+			->loadController()
+			// do action
+			->doAction();
 
 			echo '<pre>';
 			print_r($this);
@@ -82,10 +90,64 @@ class Route extends Base{
 
 		// on response
 		ob_start();
-		//M::event()->change('system.on_response', $html);
+
+		// system on response
+		M::event()->trigger('system.on_response', array(&$html));
 
 		// display html & end all script
 		die($html);
+	}
+
+	/**
+	 * parser request url
+	 */
+	private function parseURL(){
+		// on get domain
+		M::event()->trigger('route.on_get_domain', array(DOMAIN, $this));
+
+		// get request uri
+		$this->request_uri = trim(substr($_SERVER['REQUEST_URI'], strlen(SITE_PATH)), '/');
+		// on get request uri
+		M::event()->trigger('route.on_get_request_uri', array(&$this->request_uri, $this));
+		if(!trim_slash($this->request_uri)){
+			$this->request_uri = trim_slash($this->default_request_uri);
+		}
+
+		// get query string
+		if(strpos($this->request_uri, '?') != false){
+			$this->query_string = preg_replace('/(.*?)\?([^\?].*)/', '$2', $this->request_uri);
+		}
+		// on get query string
+		M::event()->trigger('route.on_get_query_string', array(&$this->query_string, $this));
+
+		// get query segments
+		$query_segment = array();
+		if($this->query_string){
+			parse_str($this->query_string, $query_segment);
+		}
+
+		// get uri
+		$this->uri = trim(substr($this->request_uri, 0, strlen($this->request_uri) - strlen($this->query_string)), '?');
+		// remove url extension
+		$this->uri = preg_replace('#' . $this->url_extension . '#', '', $this->uri);
+		// on get uri
+		M::event()->trigger('route.on_get_uri', array(&$this->uri, $this));
+
+		// get uri segement
+		if($this->uri){
+			$this->uri_segment = explode('/', $this->uri);
+		}
+
+		// map query string into uri segment
+		M::event()->trigger('route.use_query_param', array(&$this->use_query_param, $this));
+		if($this->use_query_param){
+			$this->mapUriSegment(array_merge($_GET, $query_segment));
+		}
+
+		// on get uri segment
+		M::event()->trigger('route.on_get_uri_segment', array(&$this->uri_segment, $this));
+
+		return $this;
 	}
 
 	/**
@@ -93,7 +155,7 @@ class Route extends Base{
 	 */
 	private function loadModule(){
 		$first = array_shift($this->uri_segment);
-		if($first && M::getPath(MODULE_PATH . $first . DS)){
+		if($first && is_dir(get_path(MODULE_PATH . $first . DS))){
 			$this->module = $first;
 		}else{
 			$this->module = $this->default_module;
@@ -103,14 +165,21 @@ class Route extends Base{
 		}
 
 		$this->module_path = MODULE_PATH . $this->module . DS;
-		M::event()->trigger('router.on_get_module', array(&$this->module, &$this->module_path, $this));
+		M::event()->trigger('route.on_get_module', array(&$this->module, &$this->module_path, $this));
 
-		if(!M::getPath($this->module_path)){
-			M::exception('M::router()->loadModule(...) : Module "%s" dose not exist. Path: "%s"', array($this->module, $this->module_path));
+		if(!is_dir(get_path($this->module_path))){
+			M::exception('M::route()->loadModule(...) : Module "%s" dose not exist. Path: "%s"', array($this->module, $this->module_path));
 		}
 
-		// load bootstrap & configs
-		M::import(array($this->module_path . 'bootstrap' . EXT, $this->module_path . 'config' . EXT), false);
+		// load bootstrap
+		M::import($this->module_path . 'bootstrap' . EXT, false);
+
+		// get system config
+		$system_config =& M::config()->get('system');
+		// load config
+		if(is_array($config = M::import($this->module_path . 'config' . EXT, false))){
+			$system_config = array_replace_recursive($system_config, $config);
+		}
 
 		// check load module hook
 		if(!($first = array_shift($this->uri_segment))){
@@ -118,7 +187,7 @@ class Route extends Base{
 		}
 
 		// check allow hook module
-		M::event()->trigger('router.allow_hook_module', array(&$this->allow_hook_module, $this->module, $this));
+		M::event()->trigger('route.allow_hook_module', array(&$this->allow_hook_module, $this->module, $this));
 		$allow = array();
 		foreach($this->allow_hook_module as $k => $v){
 			if(strcasecmp($k, $this->module) == 0){
@@ -126,65 +195,118 @@ class Route extends Base{
 			}
 		}
 
-		$check = false;
+		$hook = false;
 		foreach($allow as $v){
 			if(strcasecmp($v, $first) == 0){
-				$check = true;
-
-				// load hook module
-				$this->hook_module = $first;
-				$this->hook_path = MODULE_PATH . $this->hook_module . DS . 'hook' . DS . $this->module . DS;
-				M::event()->trigger('router.on_get_hook_module', array(&$this->hook_module, &$this->hook_path, $this));
-				if(!M::getPath($this->hook_path)){
-					M::exception('M::router()->load_hook_module(...) : Hook module "%s" dose not exist. Path: "%s"',
-						array($this->hook_module, $this->hook_path));
-				}
-
-				// load bootstrap & configs
-				M::import(array($this->hook_path . 'bootstrap' . EXT, $this->hook_path . 'config' . EXT), false);
+				$hook = true;
 			}
 		}
 
-		if(!$check){
+		if($hook){
+			// load hook module
+			$this->hook_module = $first;
+			$this->hook_path = MODULE_PATH . $this->hook_module . DS . 'hook' . DS . $this->module . DS;
+
+			// on get hook module
+			M::event()->trigger('route.on_get_hook_module', array(&$this->hook_module, &$this->hook_path, $this));
+
+			if(!is_dir(get_path($this->hook_path))){
+				M::exception('M::route()->load_hook_module(...) : Hook module "%s" dose not exist. Path: "%s"', array($this->hook_module, $this->hook_path));
+			}
+
+			// load hook config
+			if(is_array($config = M::import($this->hook_path . 'config' . EXT, false))){
+				$system_config = array_replace_recursive($system_config, $config);
+			}
+		}else{
 			array_unshift($this->uri_segment, $first);
 		}
+
+		// dont allow overwrite system config
+		M::config()->set('system', $system_config, false);
 
 		return $this;
 	}
 
 	/**
-	 * parser request url
+	 * load controller
 	 */
-	private function parseURL(){
-		// on get domain & load config by domain
-		M::event()->trigger('router.on_get_domain', array(DOMAIN, &$this));
-		M::import(CONFIG_PATH . DOMAIN . EXT, false);
+	private function loadController(){
+		// get controller path
+		$path = $this->module_path;
 
-		// get request uri
-		$this->request_uri = M::trimSlash($_SERVER['REQUEST_URI']);
-
-		// get query string
-		$this->query_string = $_SERVER['QUERY_STRING'];
-
-		// get uri
-		$this->uri = trim(substr($this->request_uri, 0, strlen($this->request_uri) - strlen($this->query_string)), '?');
-		// remove url extension
-		$uri = preg_replace('#' . $this->url_extension . '#', '', $this->uri);
-		M::event()->trigger('router.on_get_uri', array(&$uri));
-
-		// get uri segement
-		if($uri){
-			$this->uri_segment = explode('/', $uri);
+		if($this->hook_module){
+			$path = $this->hook_path;
 		}
 
-		// map query string into uri segment
-		M::event()->trigger('router.use_query_param', array(&$this->use_query_param));
-		if($this->use_query_param){
-			$this->mapUriSegment($_GET);
+		$path .= 'controller' . DS;
+
+		// group controller
+		if(($first = array_shift($this->uri_segment)) && is_dir(get_path($path . $first))){
+			$this->group_controller = $first;
+			$path .= $first . DS;
+			$first = array_shift($this->uri_segment);
 		}
 
-		// on get uri segment
-		M::event()->trigger('router.on_get_uri_segment', array(&$this->uri_segment));
+		// controller
+		if($first && is_file(get_path($path . $first . EXT))){
+			$this->controller = $first;
+		}elseif($first){
+			array_unshift($this->uri_segment, $first);
+		}
+
+		// check controller
+		if(!M::import($path . $this->controller . EXT, false)){
+			// avoid loop redirect
+			if(!session_id()){
+				session_start();
+			}
+
+			if(!isset($_SESSION['__ROUTE_ERROR__'])){
+				$_SESSION['__ROUTE_ERROR__'] = true;
+				redirect($this->default_error);
+			}else{
+				unset($_SESSION['__ROUTE_ERROR__']);
+				M::exception('M::route()->loadController(...) : The requested "%s" was not found on this server.', $this->default_error);
+			}
+		}
+
+		// load controller
+		$cls = '\App\Module\\' . $this->module . '\\' . ($this->group_controller ? $this->group_controller : '') . $this->controller;
+		if(!class_exists($cls)){
+			// on error controller
+			M::event()->trigger('route.error_get_controller', array($cls, $this));
+			redirect($this->default_error);
+		}
+
+		$controller = new $cls;
+		// on get controller
+		M::event()->trigger('route.on_get_controller', array(&$controller, $this));
+
+		// register instance
+		M::get_instance($controller);
+
+		return $this;
+	}
+
+	/**
+	 * do action
+	 */
+	private function doAction(){
+		// get controller
+		$controller = M::get_instance();
+		$this->action = array_shift($this->uri_segment);
+
+		// check method exist | is public
+		if(!method_exists($controller, $this->action) || !(new \ReflectionMethod($controller, $this->action))->isPublic()){
+			redirect($this->default_error);
+		}
+
+		// on get action
+		M::event()->trigger('route.on_get_action', array(&$this->action, $this));
+
+		// do action
+		call_user_func_array(array($controller, $this->action), $this->uri_segment);
 
 		return $this;
 	}
@@ -194,14 +316,15 @@ class Route extends Base{
 	 * @param  array $args
 	 */
 	public function mapUriSegment($args){
-		$map_uri = $this->getUriPattern();
-
+		// map uri
+		$map_uri = $this->getUriPattern(true);
 		foreach((array)$args as $k => $v){
-			if(array_key_exists(M::trimLower($k), $map_uri)){
+			if(array_key_exists(trim_lower($k), $map_uri)){
 				$map_uri[$k] = $v;
 			}
 		}
 
+		// remove uri segment
 		foreach($map_uri as $v){
 			if(!$v){
 				continue;
@@ -209,20 +332,71 @@ class Route extends Base{
 			array_unshift($this->uri_segment, $v);
 		}
 
-		return $this;
+		return $map_uri;
 	}
 
 	/**
-	 * convert string uri pattern to array
+	 * get uri pattern
+	 * @param  boolean $revert
 	 */
-	public function getUriPattern(){
-		static $uri_pattern = array();
-		if(!$uri_pattern){
-			foreach(array_reverse(explode('/', self::MAP_URI_PATTERN)) as $v){
-				$uri_pattern[$v] = '';
-			}
+	public function getUriPattern($revert = false){
+		$pattern = explode('/', self::MAP_URI_PATTERN);
+
+		if($revert){
+			$pattern = array_reverse($pattern);
+		}
+
+		$uri_pattern = array();
+		foreach($pattern as $v){
+			$uri_pattern[$v] = '';
 		}
 
 		return $uri_pattern;
+	}
+
+	/**
+	 * build url
+	 * @param  string|array $args
+	 * @param  boolean $use_query
+	 * @param  string $extension
+	 */
+	public function renderUrl($args, $use_query = false, $extension = '.html'){
+		// get uri pattern
+		$map = $this->getUriPattern();
+
+		foreach($args as $k => $v){
+			$key = strtolower($k);
+			if(isset($map[$key])){
+				$map[$key] = $v;
+				unset($args[$k]);
+			}
+		}
+
+		$url = '';
+		foreach($map as $v){
+			if($v){
+				$url .= $v . '/';
+			}
+		}
+		$url = trim($url, '/');
+
+		if(!$use_query){
+			foreach($args as $v){
+				$url .= '/' . $v;
+			}
+			$url .= $extension;
+		}else{
+			$url .= $extension;
+
+			if($args){
+				$url .= '?';
+				foreach($args as $v){
+					$url .= $k . '=' . $v . '&';
+				}
+				$url = trim($url, '&');
+			}
+		}
+
+		return $url;
 	}
 }
