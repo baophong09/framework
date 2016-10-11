@@ -13,5 +13,10 @@
  */
 
 namespace MaskPHP;
+use \MaskPHP\Api as API;
 
-abstract class Controller extends Base{}
+abstract class Controller extends API{
+	public function __construct(){
+		parent::__construct();
+	}
+}

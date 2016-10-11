@@ -178,6 +178,10 @@ defined('IS_LOCAL') OR define('IS_LOCAL', CLIENT_IP === SERVER_IP);
  */
 defined('IS_POST') OR define('IS_POST', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST');
 defined('IS_GET') OR define('IS_GET', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'GET');
+defined('IS_PUT') OR define('IS_PUT', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'PUT');
+defined('IS_DELETE') OR define('IS_DELETE', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'DELETE');
+defined('IS_HEAD') OR define('IS_HEAD', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'HEAD');
+defined('IS_OPTIONS') OR define('IS_OPTIONS', isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS');
 
 /**
  * is ajax method
@@ -185,6 +189,10 @@ defined('IS_GET') OR define('IS_GET', isset($_SERVER['REQUEST_METHOD']) && $_SER
 defined('IS_AJAX') OR define('IS_AJAX', isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'], 'XMLHttpRequest') == 0);
 defined('IS_AJAX_POST') OR define('IS_AJAX_POST', IS_AJAX && IS_POST);
 defined('IS_AJAX_GET') OR define('IS_AJAX_GET', IS_AJAX && IS_GET);
+defined('IS_AJAX_PUT') OR define('IS_AJAX_PUT', IS_AJAX && IS_PUT);
+defined('IS_AJAX_DELETE') OR define('IS_AJAX_DELETE', IS_AJAX && IS_DELETE);
+defined('IS_AJAX_HEAD') OR define('IS_AJAX_HEAD', IS_AJAX && IS_HEAD);
+defined('IS_AJAX_OPTIONS') OR define('IS_AJAX_OPTIONS', IS_AJAX && IS_OPTIONS);
 
 /**
  * empty value
