@@ -264,7 +264,7 @@ class Route extends Base{
 
 			if(!isset($_SESSION['__ROUTE_ERROR__'])){
 				$_SESSION['__ROUTE_ERROR__'] = true;
-				redirect($this->default_error);
+				$this->error(0);
 			}else{
 				unset($_SESSION['__ROUTE_ERROR__']);
 				M::exception('M::route()->loadController(...) : The requested "%s" was not found on this server.', $this->default_error);
@@ -274,9 +274,7 @@ class Route extends Base{
 		// load controller
 		$cls = '\App\Module\\' . $this->module . '\\' . ($this->group_controller ? $this->group_controller : '') . $this->controller;
 		if(!class_exists($cls)){
-			// on error controller
-			M::event()->trigger('route.error_get_controller', array($cls, $this));
-			redirect($this->default_error);
+			$this->error(0);
 		}
 
 		$controller = new $cls;
@@ -299,7 +297,7 @@ class Route extends Base{
 
 		// check method exist | is public
 		if(!method_exists($controller, $this->action) || !(new \ReflectionMethod($controller, $this->action))->isPublic()){
-			redirect($this->default_error);
+			$this->error(1);
 		}
 
 		// on get action
@@ -309,6 +307,19 @@ class Route extends Base{
 		call_user_func_array(array($controller, $this->action), $this->uri_segment);
 
 		return $this;
+	}
+
+	/**
+	 * handle error
+	 */
+	private function error($err_number = 0){
+		$error = array(
+			'CONTROLLER_NOT_FOUND',
+			'ACTION_NOT_FOUND'
+		);
+		// on error controller
+		M::event()->trigger('route.on_error', array($error[$err_number], $this));
+		redirect($this->default_error);
 	}
 
 	/**

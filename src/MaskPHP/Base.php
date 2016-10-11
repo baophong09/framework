@@ -37,11 +37,33 @@ abstract class Base{
     }
 
     /**
-	 * auto expand method
+     * assign variable to view
+     * @param  string | array $name
+     * @param  $value
+     */
+    public function assign($key, $value = null){
+        M::assign($key, $value);
+        return $this;
+    }
+
+    /**
+     * get data assigned
+     * @param  string $key
+     */
+    public function data($key = null){
+        return M::assign($key);
+    }
+
+    /**
+	 * auto expand method or get core lib
      * @param  string $method
      * @param  array $args
 	 */
-	function __call($method, $args){
+	public function __call($method, $args){
+        if(($instance = M::__callStatic($method, $args))){
+            return $instance;
+        }
+
 		$lib = str_replace('\\', '.', get_class($this));
 		return M::event()->expand("$lib.expand.$method", $args, $this);
 	}

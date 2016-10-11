@@ -15,7 +15,7 @@
 namespace MaskPHP;
 
 class Config extends Base{
-	private $data = [], $overwrite = [];
+	protected $data = array(), $overwrite = array();
 
 	/**
 	 * set config

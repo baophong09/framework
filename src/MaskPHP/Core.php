@@ -25,9 +25,18 @@ abstract class M{
 
         $first  = substr(trim_lower($lib), 0, 1);
         $cls    = "\MaskPHP\\" . strtoupper($first) . substr($lib, 1);
-        $lib    = strtolower(str_replace('\\', '.', trim_slash($cls, '\\')));
-
         if(!isset($data[$lib])){
+            // does not exist class
+            if(!class_exists($cls)){
+                return null;
+            }
+
+            // dont init able
+            $ref = new \ReflectionClass($cls);
+            if(!$ref->IsInstantiable()){
+                return null;
+            }
+
             $data[$lib] = new $cls;
         }
 
@@ -116,6 +125,33 @@ abstract class M{
         }
 
         return $instance;
+    }
+
+    /**
+     * get & assign variable
+     * @param  string | array $name
+     * @param  $value
+     */
+    public static function assign($key = null, $value = EMPTY_VALUE){
+        static $data = array();
+
+        if(!$key){
+            return $data;
+        }
+
+        if(is_empty($value)){
+            if(isset($data[$key])){
+                return $data[$key];
+            }
+
+            return null;
+        }
+
+        if(is_array($key)){
+            $data = array_merge($data, $key);
+        }else{
+            $data[$key] = $value;
+        }
     }
 
     /**
