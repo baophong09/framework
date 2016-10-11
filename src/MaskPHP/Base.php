@@ -60,10 +60,12 @@ abstract class Base{
      * @param  array $args
 	 */
 	public function __call($method, $args){
+        // get core lib
         if(($instance = M::__callStatic($method, $args))){
             return $instance;
         }
 
+        // expand method
 		$lib = str_replace('\\', '.', get_class($this));
 		return M::event()->expand("$lib.expand.$method", $args, $this);
 	}

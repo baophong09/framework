@@ -117,7 +117,7 @@ abstract class M{
      * Reference to your controller’s instance
      * @param  object $controller
      */
-    public static function &get_instance(&$controller = null){
+    public static function &getInstance(&$controller = null){
         static $instance = null;
 
         if(!$instance && is_object($controller)){

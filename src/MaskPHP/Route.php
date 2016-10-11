@@ -282,7 +282,7 @@ class Route extends Base{
 		M::event()->trigger('route.on_get_controller', array(&$controller, $this));
 
 		// register instance
-		M::get_instance($controller);
+		M::getInstance($controller);
 
 		return $this;
 	}
@@ -292,7 +292,7 @@ class Route extends Base{
 	 */
 	private function doAction(){
 		// get controller
-		$controller = M::get_instance();
+		$controller = M::getInstance();
 		$this->action = array_shift($this->uri_segment);
 
 		// check method exist | is public
